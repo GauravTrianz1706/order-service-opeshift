@@ -1,0 +1,66 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: order-service
+  namespace: my-app-prod
+  labels:
+    app: order-service
+spec:
+  replicas: 2
+  strategy:
+    type: Rolling
+    rollingParams:
+      updatePeriodSeconds: 1
+      intervalSeconds: 1
+      timeoutSeconds: 600
+      maxUnavailable: 25%
+      maxSurge: 25%
+  triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - order-service
+        from:
+          kind: ImageStreamTag
+          name: order-service:latest
+    - type: ConfigChange
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      serviceAccountName: order-service-sa
+      containers:
+        - name: order-service
+          image: image-registry.openshift-image-registry.svc:5000/my-app-prod/order-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: persistent-data
+              mountPath: /var/data
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: persistent-data
+          persistentVolumeClaim:
+            claimName: order-service-pvc

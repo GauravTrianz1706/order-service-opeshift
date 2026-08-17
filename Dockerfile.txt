@@ -1,0 +1,14 @@
+FROM registry.access.redhat.com/ubi9/openjdk-17:1.18 AS builder
+WORKDIR /workspace
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+FROM registry.access.redhat.com/ubi9/openjdk-17-runtime:1.18
+WORKDIR /deployments
+COPY --from=builder /workspace/target/order-service-1.0.0.jar app.jar
+
+EXPOSE 8080
+# OpenShift Restricted SCC compatible user ID
+USER 185
+ENTRYPOINT ["java", "-jar", "app.jar"]
