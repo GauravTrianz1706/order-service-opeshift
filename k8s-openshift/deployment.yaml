@@ -1,5 +1,5 @@
-apiVersion: apps.openshift.io/v1
-kind: DeploymentConfig
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: order-service
   namespace: my-app-prod
@@ -7,24 +7,14 @@ metadata:
     app: order-service
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
   strategy:
-    type: Rolling
-    rollingParams:
-      updatePeriodSeconds: 1
-      intervalSeconds: 1
-      timeoutSeconds: 600
+    type: RollingUpdate
+    rollingUpdate:
       maxUnavailable: 25%
       maxSurge: 25%
-  triggers:
-    - type: ImageChange
-      imageChangeParams:
-        automatic: true
-        containerNames:
-          - order-service
-        from:
-          kind: ImageStreamTag
-          name: order-service:latest
-    - type: ConfigChange
   template:
     metadata:
       labels:
@@ -33,7 +23,7 @@ spec:
       serviceAccountName: order-service-sa
       containers:
         - name: order-service
-          image: image-registry.openshift-image-registry.svc:5000/my-app-prod/order-service:latest
+          image: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/order-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
